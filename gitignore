@@ -1,5 +1,5 @@
-metadata/data
-metadata/data/bugs
-metadata/data/images
-metadata/data/test
+metadata/data/
+metadata/data/bugs/
+metadata/data/images/
+metadata/data/test/
 .env
