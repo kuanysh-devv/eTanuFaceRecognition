@@ -10,6 +10,7 @@ import os
 import uuid
 import sys
 import numpy as np
+from mtcnn import MTCNN
 import torchvision.transforms as transforms
 import torchvision.models as models
 from torchvision.models import ResNet50_Weights
@@ -51,48 +52,43 @@ def get_image_embedding(image_path):
     resnet = torch.nn.Sequential(*list(resnet.children())[:-1])
     # Set model to evaluation mode
     resnet.eval()
-    # Load image using OpenCV for face detection
+
+    # Load image using OpenCV
     image = cv2.imread(image_path)
     # Convert image to RGB (OpenCV uses BGR by default)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # Load pre-trained face detection model from OpenCV
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    # Initialize the MTCNN detector
+    detector = MTCNN()
 
-    # Perform face detection
-    faces = face_cascade.detectMultiScale(image_rgb, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    # Detect faces
+    faces = detector.detect_faces(image_rgb)
 
-    if len(faces) == 0:
+    if not faces:
         print("No faces detected in the image.")
         return None
 
-    # Get the largest face (assuming only one face per image)
-    (x, y, w, h) = max(faces, key=lambda rect: rect[2] * rect[3])
+    # Get the bounding box of the first detected face
+    face_box = faces[0]['box']
+    x, y, w, h = face_box
 
     # Crop the image to the detected face
     face_image = image_rgb[y:y + h, x:x + w]
 
-    # Define preprocessing transformations
-    preprocess = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+    resized_face = cv2.resize(face_image, (224, 224))
+
+    # Convert the resized face image to a PyTorch tensor
+    transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    input_tensor = transform(resized_face).unsqueeze(0)
 
-    # Preprocess face image
-    input_tensor = preprocess(face_image)
-    input_batch = input_tensor.unsqueeze(0)  # Add batch dimension
-
-    # Run inference
+    # Forward pass through ResNet
     with torch.no_grad():
-        output = resnet(input_batch)
+        embedding = resnet(input_tensor)
 
-    # Flatten the output
-    embedding = output.squeeze().numpy()
-
-    return embedding
+    return embedding.squeeze().numpy()
 
 
 @shared_task

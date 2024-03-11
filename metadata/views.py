@@ -62,7 +62,8 @@ def get_image_embedding(image_path):
     faces = face_cascade.detectMultiScale(image_rgb, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
     if len(faces) == 0:
-        print("No faces detected in the image.")
+        print(f"No faces detected in the image: {image_path}")
+
         return None
 
     # Get the largest face (assuming only one face per image)
@@ -167,7 +168,7 @@ class MetadataViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def commit(self, request, *args, **kwargs):
         start_time = time.time()
-        image_directory = "C:/Users/User4/PycharmProjects/eTanuReincarnationAPI/metadata/data/images"
+        image_directory = "C:/Users/User4/PycharmProjects/eTanuReincarnationAPI/metadata/data/test"
 
         collection_name = 'face_embeddings'
 
